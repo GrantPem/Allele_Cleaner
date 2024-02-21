@@ -1,0 +1,123 @@
+import os
+from optparse import OptionParser
+
+def f2txt(fasta):
+    # Extract the base name (without extension) of the fasta file
+    base_name = os.path.splitext(os.path.basename(fasta))[0]
+    # Create the output file name with .txt extension
+    output_file = f"{base_name}.txt"
+    
+    # Open the input fasta file and the output text file
+    with open(fasta, 'r') as fasta_file, open(output_file, 'w') as text_file:
+        # Read from fasta and write to text file
+        text_file.write(fasta_file.read())
+    # Return the name of the created text file
+    return output_file
+
+def parse_file(file_path):
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+
+    records = {}
+    current_header = ''
+    current_sequence = ''
+    ignore_current = False  # Flag to indicate whether to ignore the current record
+
+    for line in lines:
+        if line.startswith('>'):
+            if current_header and not ignore_current:
+                # Process the previous record
+                name = current_header.split('_')[0][1:]
+                if name in records:
+                    records[name].append((current_score, current_sequence, current_header))
+                else:
+                    records[name] = [(current_score, current_sequence, current_header)]
+
+            current_header = line.strip()
+            parts = current_header.split('_')
+
+            # Check if the header has the expected format
+            if len(parts) >= 4:
+                try:
+                    current_score = int(parts[3])
+                    ignore_current = False
+                except ValueError:
+                    # If the score is not an integer, ignore this record
+                    ignore_current = True
+            else:
+                # If the header format is not as expected, ignore this record
+                ignore_current = True
+
+            current_sequence = ''
+        else:
+            if not ignore_current:
+                current_sequence += line.strip()
+
+    # Process the last record if not ignored
+    if current_header and not ignore_current:
+        name = current_header.split('_')[0][1:]
+        if name in records:
+            records[name].append((current_score, current_sequence, current_header))
+        else:
+            records[name] = [(current_score, current_sequence, current_header)]
+
+    return records
+
+
+def process_records(records):
+    # Initialize an empty dictionary for processed records
+    processed = {}
+    # Iterate over each record in the dictionary
+    for name, tests in records.items():
+        # Sort the tests by score (descending) and sequence
+        tests = sorted(tests, key=lambda x: (-x[0], x[1]))
+        unique_tests = {}
+        # Iterate over the sorted tests
+        for score, sequence, header in tests:
+            # Record only the highest score for each unique sequence
+            if sequence not in unique_tests or unique_tests[sequence][0] < score:
+                unique_tests[sequence] = (score, header)
+        # Store the processed tests
+        processed[name] = [(score, seq, hdr) for seq, (score, hdr) in unique_tests.items()]
+    # Return the processed records
+    return processed
+
+def write_results(processed, output_file):
+    # Open the output file for writing
+    with open(output_file, 'w') as file:
+        # Write each record to the file
+        for name, tests in processed.items():
+            for score, sequence, header in tests:
+                file.write(f'{header}\n{sequence}\n')
+
+def main(input_fasta):
+    # Convert the fasta file to a text file and get the name
+    textfile = f2txt(input_fasta)
+    # Remove the .txt extension to get the base name
+    name = textfile.rstrip(".txt")
+    # Create the output file name
+    outputfile = name + "_Cleaned.fasta"
+    # Parse the text file to extract records
+    records = parse_file(textfile)
+    # Process the records
+    processed_records = process_records(records)
+    # Write the results to the output file
+    write_results(processed_records, outputfile)
+
+if __name__ == "__main__":
+    # Set up command line options
+    parser = OptionParser(usage="usage: %prog [options]",version="%prog 0.0.3")
+    # Add option for specifying the fasta file
+    parser.add_option("-f","--fasta",dest="fasta", help="input FASTA file to filter [REQUIRED]", type="string")
+    # Parse command line options
+    options, args = parser.parse_args()
+    # List of mandatory options
+    mandatories = ["fasta"]
+    # Check if all mandatory options are provided
+    for m in mandatories:
+        if not getattr(options,m,None):
+            print("\nMust provide %s.\n" %m)
+            parser.print_help()
+            exit(-1)
+    # Run the main function with the provided fasta file
+    main(options.fasta)
