@@ -13,3 +13,11 @@
 ARA08_MP4_Exon1_992_A1
 992 is the read count
   
+
+
+
+- Test files are included with the repoitory. This is how you run the script:  
+python Allele_Cleaner.py -f TEST.fas  
+The pre-cleaned test file should contain 164 sequence, once cleaned it should have 82 sequences.  
+  
+- Help command python Allele_Cleaner.py -h
