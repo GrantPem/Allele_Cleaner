@@ -9,7 +9,7 @@
 - The fasta should be formatted as so:  
 sample_gene_exon_readcount  
 The script assumes the fields, all separated by "_".  
-The first three fields can be in any order, read count -must- be the fourth field after the 3rd underscore.
+The first three fields can be in any order, read count **must** be the fourth field after the 3rd underscore.
 
 - Test files are included with the repository. This is how you run the script:  
 python Allele_Cleaner.py -f TEST.fas  
